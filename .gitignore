@@ -1,0 +1,19 @@
+# Ignore Google OAuth credentials
+oauth_credentials.json
+token.json
+fortoken.py
+
+# Ignore downloaded voice files
+voices/
+
+# Ignore bot folder entirely
+bot/
+
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environment files
+.env
