@@ -9,6 +9,8 @@ from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 import json
 
+import time
+
 from telegram import Update
 from telegram.ext import (
     ApplicationBuilder,
@@ -332,11 +334,23 @@ async def voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     media = MediaFileUpload(local_path)
 
-    file = drive.files().create(
-        body=file_metadata,
-        media_body=media,
-        fields="id"
-    ).execute()
+    file = None
+
+    for i in range(3):  # retry 3 times
+        try:
+            file = drive.files().create(
+                body=file_metadata,
+                media_body=media,
+                fields="id"
+            ).execute()
+            break
+        except Exception as e:
+            print("Drive upload failed, retrying...", e)
+            time.sleep(2)
+
+    if file is None:
+        await update.message.reply_text("Upload failed. Please try again.")
+        return ConversationHandler.END
 
     file_id = file.get("id")
     link = f"https://drive.google.com/file/d/{file_id}"
@@ -385,6 +399,9 @@ async def restart(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     return GENDER
+async def error_handler(update, context):
+    print("Exception:", context.error)
+
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Cancelled.")
@@ -409,6 +426,7 @@ def main():
         per_message=False,
     )
 
+    app.add_error_handler(error_handler)
     app.add_handler(conv)
     app.add_handler(CallbackQueryHandler(restart, pattern="^restart$"))
 
